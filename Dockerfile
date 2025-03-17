@@ -10,16 +10,6 @@ RUN touch .gitignore_for_build_directory \
 
 FROM rust:bookworm AS bin-builder
 
-ARG CARGO_FEATURES=release-feature-set
-ARG CARGO_PROFILE=release
-ARG QW_COMMIT_DATE
-ARG QW_COMMIT_HASH
-ARG QW_COMMIT_TAGS
-
-ENV QW_COMMIT_DATE=$QW_COMMIT_DATE
-ENV QW_COMMIT_HASH=$QW_COMMIT_HASH
-ENV QW_COMMIT_TAGS=$QW_COMMIT_TAGS
-
 RUN apt-get -y update \
     && apt-get -y install ca-certificates \
                           clang \
@@ -37,11 +27,23 @@ WORKDIR /quickwit
 
 RUN rustup toolchain install
 
+ARG CARGO_FEATURES=""
+ARG CARGO_PROFILE=debug
+# ARG CARGO_FEATURES=release-feature-set
+# ARG CARGO_PROFILE=release
+ARG QW_COMMIT_DATE
+ARG QW_COMMIT_HASH
+ARG QW_COMMIT_TAGS
+
+ENV QW_COMMIT_DATE=$QW_COMMIT_DATE
+ENV QW_COMMIT_HASH=$QW_COMMIT_HASH
+ENV QW_COMMIT_TAGS=$QW_COMMIT_TAGS
+
 RUN echo "Building workspace with feature(s) '$CARGO_FEATURES' and profile '$CARGO_PROFILE'" \
     && RUSTFLAGS="--cfg tokio_unstable" \
         cargo build \
         -p quickwit-cli \
-        --features $CARGO_FEATURES \
+        $(test -n "$CARGO_FEATURES" && echo "--features $CARGO_FEATURES") \
         --bin quickwit \
         $(test "$CARGO_PROFILE" = "release" && echo "--release") \
     && echo "Copying binaries to /quickwit/bin" \
